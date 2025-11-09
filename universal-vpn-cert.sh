@@ -1,8 +1,7 @@
 #!/bin/bash
-# universal-vpn-cert-universal.sh
-# Universal Auto SSL/TLS certificate installer for VPN services
-# Supports Cloudflare API, Stunnel5, Nginx, Webmin auto-reload, backup, logging
-# Only keeps latest backup
+# universal-vpn-cert-lightweight.sh
+# Lightweight Auto SSL/TLS certificate installer for VPN services
+# Supports optional Cloudflare API, Stunnel5, Nginx, Webmin auto-reload, backup, logging
 # By ChatGPT
 
 set -euo pipefail
@@ -29,33 +28,29 @@ TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
 LOG_FILE="$LOG_DIR/universal-vpn-cert-$TIMESTAMP.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "===== Universal VPN Certificate Installer (Universal Version) ====="
+echo "===== Universal VPN Certificate Installer (Lightweight) ====="
 echo "Timestamp: $TIMESTAMP"
 
 ###########################
 # USER INPUT
 ###########################
+echo "เลือกโหมดการใช้งาน:"
+echo "1) ไม่ใช้ Cloudflare"
+echo "2) ใช้ Cloudflare + Global API"
+read -rp "กรุณาเลือก 1 หรือ 2: " CF_OPTION
+
+if [[ "$CF_OPTION" == "2" ]]; then
+    read -rp "Enter your Cloudflare Email: " CF_EMAIL
+    read -rp "Enter your Cloudflare Global API Key: " CF_KEY
+fi
+
 read -rp "Enter your main domain (e.g., home.xq-vpn.com): " DOMAIN
-read -rp "Enter your Cloudflare Email: " CF_EMAIL
-read -rp "Enter your Cloudflare Global API Key: " CF_KEY
 
 ###########################
-# CLEAN OLD LOGS
-###########################
-find "$LOG_DIR" -type f -mtime +$MAX_LOG_DAYS -name "*.log" -exec rm -f {} \;
-echo "[INFO] Old logs older than $MAX_LOG_DAYS days removed."
-
-###########################
-# BACKUP EXISTING CERTS (LATEST ONLY)
+# BACKUP EXISTING CERTS
 ###########################
 BACKUP_DIR="$BACKUP_DIR_BASE/$TIMESTAMP"
 mkdir -p "$BACKUP_DIR"
-
-# ลบ backup เก่าทั้งหมดก่อนเก็บ backup ล่าสุด
-if [ -d "$BACKUP_DIR_BASE" ]; then
-    find "$BACKUP_DIR_BASE" -mindepth 1 -maxdepth 1 -type d ! -name "$TIMESTAMP" -exec rm -rf {} \;
-    echo "[INFO] Old backup directories removed, keeping only the latest: $BACKUP_DIR"
-fi
 
 for FILE in "$STUNNEL_CERT" "$STUNNEL_KEY" "$NGINX_CERT" "$NGINX_KEY" "$WEBMIN_CERT" "$WEBMIN_KEY"; do
     if [ -f "$FILE" ]; then
@@ -63,6 +58,15 @@ for FILE in "$STUNNEL_CERT" "$STUNNEL_KEY" "$NGINX_CERT" "$NGINX_KEY" "$WEBMIN_C
         cp "$FILE" "$BACKUP_DIR/"
     fi
 done
+
+# Keep only latest backup
+find "$BACKUP_DIR_BASE" -mindepth 1 -maxdepth 1 -type d ! -name "$TIMESTAMP" -exec rm -rf {} \;
+
+###########################
+# CLEAN OLD LOGS
+###########################
+find "$LOG_DIR" -type f -mtime +$MAX_LOG_DAYS -name "*.log" -exec rm -f {} \;
+echo "[INFO] Old logs older than $MAX_LOG_DAYS days removed."
 
 ###########################
 # SET DEFAULT CA
@@ -81,13 +85,18 @@ fi
 # ISSUE WILDCARD CERTIFICATE
 ###########################
 echo "[INFO] Issuing Let's Encrypt ECC wildcard certificate for $DOMAIN..."
-export CF_Email="$CF_EMAIL"
-export CF_Key="$CF_KEY"
+if [[ "$CF_OPTION" == "2" ]]; then
+    export CF_Email="$CF_EMAIL"
+    export CF_Key="$CF_KEY"
+    DNS_OPTION="--dns dns_cf"
+else
+    DNS_OPTION="--standalone"
+fi
 
 RETRY_COUNT=0
 MAX_RETRIES=3
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --dns dns_cf --keylength ec-256 --force; then
+    if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" $DNS_OPTION --keylength ec-256 --force; then
         echo "[INFO] Certificate issued successfully."
         break
     else
@@ -105,7 +114,7 @@ fi
 ###########################
 # INSTALL CERTIFICATES
 ###########################
-echo "[INFO] Installing certificate for Stunnel5..."
+echo "[INFO] Installing certificate for stunnel5..."
 "$ACME_HOME"/acme.sh --install-cert -d "$DOMAIN" \
     --ecc \
     --key-file "$STUNNEL_KEY" \
@@ -138,24 +147,6 @@ if [ -f "$WEBMIN_KEY" ]; then
     chmod 600 "$WEBMIN_KEY" "$WEBMIN_CERT"
     chown root:root "$WEBMIN_KEY" "$WEBMIN_CERT"
 fi
-
-###########################
-# SUCCESS
-###########################
-echo "===== Success! ====="
-echo "Certificates installed:"
-echo "Stunnel5 Key  : $STUNNEL_KEY"
-echo "Stunnel5 Cert : $STUNNEL_CERT"
-echo "Nginx Key     : $NGINX_KEY"
-echo "Nginx Cert    : $NGINX_CERT"
-if [ -f "$WEBMIN_KEY" ]; then
-    echo "Webmin Key    : $WEBMIN_KEY"
-    echo "Webmin Cert   : $WEBMIN_CERT"
-fi
-echo "Wildcard domain ready: *.$DOMAIN"
-echo "Backup of previous certs in: $BACKUP_DIR"
-echo "Log file: $LOG_FILE"
-echo "Certificates will auto-renew via acme.sh cron."
 
 ###########################
 # SYSTEMD PATH UNIT FOR AUTO SSL RELOAD
@@ -193,6 +184,7 @@ EOF
 
 chmod +x "$AUTO_SSL_SCRIPT"
 
+# --- Systemd path unit ---
 cat << EOF > /etc/systemd/system/universal-vpn-auto-ssl.path
 [Unit]
 Description=Watch universal-vpn-cert SSL files and reload services
@@ -222,4 +214,8 @@ systemctl daemon-reload
 systemctl enable --now universal-vpn-auto-ssl.path
 
 echo "[INFO] Systemd path unit for auto SSL reload enabled."
+echo "===== Success! ====="
+echo "Certificates installed and services will auto-reload on change."
+echo "Backup stored in $BACKUP_DIR"
+echo "Log file: $LOG_FILE"
 exit 0
