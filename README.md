@@ -22,23 +22,18 @@
 
 ## ⚙️ การใช้งาน
 
-1. **ดาวน์โหลดสคริปต์**
+1. **ดาวน์โหลดสคริปต์ & รันสคริปต์**
 ```bash
-wget https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh
-chmod +x universal-vpn-cert.sh
+wget -O universal-vpn-cert.sh https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh && chmod +x universal-vpn-cert.sh && sudo bash universal-vpn-cert.sh ; rm -f universal-vpn-cert.sh
+
 ```
 
-2. **รันสคริปต์**
-```bash
-sudo bash universal-vpn-cert.sh
-```
-
-3. **ใส่ข้อมูลเมื่อสคริปต์ถาม**:
+2. **ใส่ข้อมูลเมื่อสคริปต์ถาม**:
 - Domain หลัก (เช่น `v2ray.xq-vpn.com`)
 - Cloudflare Email
 - Cloudflare Global API Key
 
-4. สคริปต์จะทำงาน:
+3. สคริปต์จะทำงาน:
 - Backup ใบรับรองเก่า
 - ออกและติดตั้ง Wildcard SSL
 - Reload Stunnel5, Nginx และ Webmin อัตโนมัติ
