@@ -34,10 +34,10 @@ echo "Timestamp: $TIMESTAMP"
 ###########################
 # USER INPUT
 ###########################
-echo "เลือกโหมดการใช้งาน:"
-echo "1) ไม่ใช้ Cloudflare"
-echo "2) ใช้ Cloudflare + Global API"
-read -rp "กรุณาเลือก 1 หรือ 2: " CF_OPTION
+echo "เน€เธฅเธทเธญเธเนเธซเธกเธ”เธเธฒเธฃเนเธเนเธเธฒเธ:"
+echo "1) เนเธกเนเนเธเน Cloudflare"
+echo "2) เนเธเน Cloudflare + Global API"
+read -rp "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธ 1 เธซเธฃเธทเธญ 2: " CF_OPTION
 
 if [[ "$CF_OPTION" == "2" ]]; then
     read -rp "Enter your Cloudflare Email: " CF_EMAIL
