@@ -24,7 +24,7 @@
 
 1. **ดาวน์โหลดสคริปต์**
 ```bash
-wget https://github.com/<your-github>/universal-vpn-cert/raw/main/universal-vpn-cert-light.sh
+wget https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh
 chmod +x universal-vpn-cert-light.sh
 ```
 
