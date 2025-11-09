@@ -39,12 +39,12 @@ echo "1) ไม่ใช้ Cloudflare"
 echo "2) ใช้ Cloudflare + Global API"
 read -rp "กรุณาเลือก 1 หรือ 2: " MODE
 
-read -rp "Enter your main domain (e.g., home.xq-vpn.com): " DOMAIN
-
 if [[ "$MODE" == "2" ]]; then
     read -rp "Enter your Cloudflare Email: " CF_EMAIL
     read -rp "Enter your Cloudflare Global API Key: " CF_KEY
 fi
+
+read -rp "Enter your main domain (e.g., home.xq-vpn.com): " DOMAIN
 
 ###########################
 # BACKUP EXISTING CERTS
@@ -58,6 +58,9 @@ for FILE in "$STUNNEL_CERT" "$STUNNEL_KEY" "$NGINX_CERT" "$NGINX_KEY" "$WEBMIN_C
         cp "$FILE" "$BACKUP_DIR/"
     fi
 done
+
+# ลบ backup เก่าทั้งหมด ยกเว้นล่าสุด
+find "$BACKUP_DIR_BASE" -mindepth 1 -maxdepth 1 ! -name "$TIMESTAMP" -type d -exec rm -rf {} \;
 
 ###########################
 # CLEAN OLD LOGS
@@ -82,6 +85,7 @@ fi
 # ISSUE WILDCARD CERTIFICATE
 ###########################
 echo "[INFO] Issuing Let's Encrypt ECC wildcard certificate for $DOMAIN..."
+
 if [[ "$MODE" == "2" ]]; then
     export CF_Email="$CF_EMAIL"
     export CF_Key="$CF_KEY"
@@ -90,16 +94,10 @@ fi
 RETRY_COUNT=0
 MAX_RETRIES=3
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if [[ "$MODE" == "1" ]]; then
-        if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --standalone --keylength ec-256 --force; then
-            echo "[INFO] Certificate issued successfully."
-            break
-        fi
+    if [[ "$MODE" == "2" ]]; then
+        "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --dns dns_cf --keylength ec-256 --force && break
     else
-        if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --dns dns_cf --keylength ec-256 --force; then
-            echo "[INFO] Certificate issued successfully."
-            break
-        fi
+        "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --standalone --keylength ec-256 --force && break
     fi
     echo "[WARN] Certificate issuance failed. Retrying in 15s..."
     sleep 15
@@ -128,7 +126,7 @@ echo "[INFO] Installing certificate for Nginx..."
     --fullchain-file "$NGINX_CERT" \
     --reloadcmd "systemctl reload nginx || echo '[WARN] Failed to reload nginx'"
 
-if [ -f "$WEBMIN_CERT" ] && [ -f "$WEBMIN_KEY" ]; then
+if [ -f "$WEBMIN_KEY" ]; then
     echo "[INFO] Installing certificate for Webmin..."
     "$ACME_HOME"/acme.sh --install-cert -d "$DOMAIN" \
         --ecc \
@@ -142,7 +140,6 @@ fi
 ###########################
 chmod 600 "$STUNNEL_KEY" "$STUNNEL_CERT" "$NGINX_KEY" "$NGINX_CERT"
 chown root:root "$STUNNEL_KEY" "$STUNNEL_CERT" "$NGINX_KEY" "$NGINX_CERT"
-
 if [ -f "$WEBMIN_KEY" ]; then
     chmod 600 "$WEBMIN_KEY" "$WEBMIN_CERT"
     chown root:root "$WEBMIN_KEY" "$WEBMIN_CERT"
@@ -170,7 +167,6 @@ echo "Certificates will auto-renew via acme.sh cron."
 # SYSTEMD PATH UNIT FOR AUTO SSL RELOAD
 ###########################
 AUTO_SSL_SCRIPT="/usr/local/bin/universal-vpn-auto-ssl.sh"
-
 cat << 'EOF' > "$AUTO_SSL_SCRIPT"
 #!/bin/bash
 STUNNEL_CERT="/etc/xray/xray.crt"
@@ -199,7 +195,6 @@ if [[ -f "$WEBMIN_CERT" && -f "$WEBMIN_KEY" ]]; then
     reload_service "webmin"
 fi
 EOF
-
 chmod +x "$AUTO_SSL_SCRIPT"
 
 cat << EOF > /etc/systemd/system/universal-vpn-auto-ssl.path
