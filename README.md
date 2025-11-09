@@ -34,7 +34,7 @@ sudo bash universal-vpn-cert.sh
 ```
 
 3. **ใส่ข้อมูลเมื่อสคริปต์ถาม**:
-- Domain หลัก (เช่น `home.xq-vpn.com`)
+- Domain หลัก (เช่น `v2ray.xq-vpn.com`)
 - Cloudflare Email
 - Cloudflare Global API Key
 
