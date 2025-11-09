@@ -24,7 +24,7 @@
 
 1. **ดาวน์โหลดสคริปต์ & รันสคริปต์**
 ```bash
-wget -O universal-vpn-cert.sh https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh && chmod +x universal-vpn-cert.sh && sudo bash universal-vpn-cert.sh ; rm -f universal-vpn-cert.sh
+wget -O universal-vpn-cert.sh https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh && chmod +x universal-vpn-cert.sh && sudo bash universal-vpn-cert.sh && rm -f universal-vpn-cert.sh
 
 ```
 
