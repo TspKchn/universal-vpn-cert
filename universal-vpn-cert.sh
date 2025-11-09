@@ -3,7 +3,6 @@
 # Lightweight Auto SSL/TLS certificate installer for VPN services
 # Supports optional Cloudflare API, Stunnel5, Nginx, Webmin auto-reload, backup, logging
 # By ChatGPT
-# 2025-11-10
 
 set -euo pipefail
 
@@ -36,16 +35,16 @@ echo "Timestamp: $TIMESTAMP"
 # USER INPUT
 ###########################
 echo "เลือกโหมดการใช้งาน:"
-echo "1) ไม่ใช้ Cloudflare (standalone mode, ต้องหยุด Xray ชั่วคราว)"
-echo "2) ใช้ Cloudflare + Global API (DNS mode, ไม่ต้องหยุด Xray)"
+echo "1) ไม่ใช้ Cloudflare"
+echo "2) ใช้ Cloudflare + Global API"
 read -rp "กรุณาเลือก 1 หรือ 2: " MODE
+
+read -rp "Enter your main domain (e.g., home.xq-vpn.com): " DOMAIN
 
 if [[ "$MODE" == "2" ]]; then
     read -rp "Enter your Cloudflare Email: " CF_EMAIL
     read -rp "Enter your Cloudflare Global API Key: " CF_KEY
 fi
-
-read -rp "Enter your main domain (e.g., home.xq-vpn.com): " DOMAIN
 
 ###########################
 # BACKUP EXISTING CERTS
@@ -80,21 +79,36 @@ if [ -d "$ACME_HOME/${DOMAIN}_ecc" ]; then
 fi
 
 ###########################
-# ISSUE CERTIFICATE
+# ISSUE WILDCARD CERTIFICATE
 ###########################
 echo "[INFO] Issuing Let's Encrypt ECC wildcard certificate for $DOMAIN..."
-
 if [[ "$MODE" == "2" ]]; then
     export CF_Email="$CF_EMAIL"
     export CF_Key="$CF_KEY"
-    "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --dns dns_cf --keylength ec-256 --force
-else
-    # standalone mode, check port 80
-    if lsof -i:80 >/dev/null; then
-        echo "[ERROR] Port 80 is in use. Please stop Xray or other service using port 80."
-        exit 1
+fi
+
+RETRY_COUNT=0
+MAX_RETRIES=3
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if [[ "$MODE" == "1" ]]; then
+        if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --standalone --keylength ec-256 --force; then
+            echo "[INFO] Certificate issued successfully."
+            break
+        fi
+    else
+        if "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --dns dns_cf --keylength ec-256 --force; then
+            echo "[INFO] Certificate issued successfully."
+            break
+        fi
     fi
-    "$ACME_HOME"/acme.sh --issue -d "$DOMAIN" -d "*.$DOMAIN" --standalone --keylength ec-256 --force
+    echo "[WARN] Certificate issuance failed. Retrying in 15s..."
+    sleep 15
+    RETRY_COUNT=$((RETRY_COUNT+1))
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "[ERROR] Failed to issue certificate after $MAX_RETRIES attempts."
+    exit 1
 fi
 
 ###########################
@@ -114,7 +128,7 @@ echo "[INFO] Installing certificate for Nginx..."
     --fullchain-file "$NGINX_CERT" \
     --reloadcmd "systemctl reload nginx || echo '[WARN] Failed to reload nginx'"
 
-if [[ -f "$WEBMIN_CERT" && -f "$WEBMIN_KEY" ]]; then
+if [ -f "$WEBMIN_CERT" ] && [ -f "$WEBMIN_KEY" ]; then
     echo "[INFO] Installing certificate for Webmin..."
     "$ACME_HOME"/acme.sh --install-cert -d "$DOMAIN" \
         --ecc \
@@ -129,7 +143,7 @@ fi
 chmod 600 "$STUNNEL_KEY" "$STUNNEL_CERT" "$NGINX_KEY" "$NGINX_CERT"
 chown root:root "$STUNNEL_KEY" "$STUNNEL_CERT" "$NGINX_KEY" "$NGINX_CERT"
 
-if [[ -f "$WEBMIN_KEY" ]]; then
+if [ -f "$WEBMIN_KEY" ]; then
     chmod 600 "$WEBMIN_KEY" "$WEBMIN_CERT"
     chown root:root "$WEBMIN_KEY" "$WEBMIN_CERT"
 fi
@@ -143,7 +157,7 @@ echo "Stunnel5 Key  : $STUNNEL_KEY"
 echo "Stunnel5 Cert : $STUNNEL_CERT"
 echo "Nginx Key     : $NGINX_KEY"
 echo "Nginx Cert    : $NGINX_CERT"
-if [[ -f "$WEBMIN_KEY" ]]; then
+if [ -f "$WEBMIN_KEY" ]; then
     echo "Webmin Key    : $WEBMIN_KEY"
     echo "Webmin Cert   : $WEBMIN_CERT"
 fi
@@ -188,7 +202,6 @@ EOF
 
 chmod +x "$AUTO_SSL_SCRIPT"
 
-# Systemd units
 cat << EOF > /etc/systemd/system/universal-vpn-auto-ssl.path
 [Unit]
 Description=Watch universal-vpn-cert SSL files and reload services
