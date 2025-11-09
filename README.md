@@ -45,7 +45,7 @@ wget -O universal-vpn-cert.sh https://raw.githubusercontent.com/TspKchn/universa
 
 | ไฟล์ | คำอธิบาย |
 |-------|-----------|
-| `universal-vpn-cert-light.sh` | สคริปต์หลักสำหรับติดตั้งและอัปเดต SSL |
+| `universal-vpn-cert.sh` | สคริปต์หลักสำหรับติดตั้งและอัปเดต SSL |
 | `/etc/xray/xray.crt` | ใบรับรอง Stunnel5 |
 | `/etc/xray/xray.key` | Private Key Stunnel5 |
 | `/etc/ssl/universal-vpn/fullchain.cer` | ใบรับรอง Nginx |
