@@ -25,12 +25,12 @@
 1. **ดาวน์โหลดสคริปต์**
 ```bash
 wget https://raw.githubusercontent.com/TspKchn/universal-vpn-cert/main/universal-vpn-cert.sh
-chmod +x universal-vpn-cert-light.sh
+chmod +x universal-vpn-cert.sh
 ```
 
 2. **รันสคริปต์**
 ```bash
-sudo bash universal-vpn-cert-light.sh
+sudo bash universal-vpn-cert.sh
 ```
 
 3. **ใส่ข้อมูลเมื่อสคริปต์ถาม**:
