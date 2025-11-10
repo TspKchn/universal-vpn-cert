@@ -29,7 +29,7 @@ wget -O universal-vpn-cert.sh https://raw.githubusercontent.com/TspKchn/universa
 ```
 
 2. **ใส่ข้อมูลเมื่อสคริปต์ถาม**:
-- Domain หลัก (เช่น `v2ray.xq-vpn.com`)
+- Domain หลัก (เช่น `test.xq-vpn.com`)
 - Cloudflare Email
 - Cloudflare Global API Key
 
