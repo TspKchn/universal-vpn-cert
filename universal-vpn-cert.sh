@@ -141,7 +141,7 @@ if [[ "$MODE" != "1" && "$MODE" != "2" ]]; then
     exit 1
 fi
 
-read -rp "Enter your main domain (e.g., test.xq-vpn.com): " DOMAIN
+read -rp "Enter your main domain (e.g., test.vpnover.com): " DOMAIN
 DOMAIN="${DOMAIN// /}"  # trim spaces
 
 # -------------------------
